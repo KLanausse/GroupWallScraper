@@ -223,4 +223,5 @@ end:
     Directory.Delete(dirPath, true);
 }
 
-Console.WriteLine("Scrape has been completed!");
+Console.WriteLine("Scrape has been completed! Press any key to terminate program.");
+Console.ReadKey();
