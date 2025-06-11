@@ -8,7 +8,7 @@ string basePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFold
 RoLogger.DisableAllLogging();
 
 // Comment = TODO!
-// Start at 8527 || Do on non-burner: 3514227
+// || Do on non-burner: 3514227
 
 // Create base directory
 if (!Directory.Exists(basePath))
@@ -57,17 +57,40 @@ if (string.IsNullOrWhiteSpace(cookieValue) || cookieValue == "<PLEASE REPLACE WI
 }
 
 // Read targets.txt
-List<ulong> list = [];
-foreach (string id in File.ReadAllText(listPath).Split(','))
+List<int> list = [];
+string listText = File.ReadAllText(listPath);
+var listTextDashSplit = listText.Split("-");
+if (listTextDashSplit.Count() == 2)
 {
-    if (ulong.TryParse(id.Trim(), out ulong res))
+    if (int.TryParse(listTextDashSplit[0].Trim(), out int start) && int.TryParse(listTextDashSplit[1].Trim(), out int end))
     {
-        Console.WriteLine($"Adding group to request queue: {id}");
-        list.Add(res);
+        if (start > end)
+        {
+            Console.WriteLine($"Oops! Your range of groups in the targets.txt is invalid! The ending group cannot be smaller than the starting group!");
+            return;
+        }
+        list = Enumerable.Range(start, (end - start) + 1).ToList();
+        Console.WriteLine($"Range of groups added: Group {start} to group {end}");
     }
     else
     {
-        Console.WriteLine($"Skipping list item '{id}'. Invalid numerical input.");
+        Console.WriteLine($"Oops! Your range of groups in the targets.txt file does not have valid numbers!");
+        return;
+    }
+}
+else
+{
+    foreach (string id in listText.Split(','))
+    {
+        if (int.TryParse(id.Trim(), out int res))
+        {
+            Console.WriteLine($"Adding group to request queue: {id}");
+            list.Add(res);
+        }
+        else
+        {
+            Console.WriteLine($"Skipping list item '{id}'. Invalid numerical input.");
+        }
     }
 }
 if (list.Count == 0)
@@ -76,7 +99,7 @@ if (list.Count == 0)
     return;
 }
 
-Console.WriteLine($"Beginning scraping program with {list.Count} queued groups.");
+Console.WriteLine($"Beginning scraping program with {list.Count} queued groups. First group: {list.First()} | Last group: {list.Last()}");
 
 // Authenticate
 Session s = new();
@@ -214,7 +237,16 @@ end:
 
     // Finish
     Console.WriteLine($"Done. Zipping file...");
-    ZipFile.CreateFromDirectory(dirPath, Path.Combine(success ? allDonePath : unableToAccessPath, (success ? string.Empty : "ERROR-") + $"GROUP {iterator}.zip"));
+    string completedPath = Path.Combine(success ? allDonePath : unableToAccessPath, (success ? string.Empty : "ERROR-") + $"GROUP {iterator}.zip");
+    
+    // Delete the old file if it exists
+    if (File.Exists(completedPath))
+    {
+        File.Delete(completedPath);
+        await Task.Delay(1000);
+    }
+
+    ZipFile.CreateFromDirectory(dirPath, completedPath);
     Console.WriteLine($"Done with group {iterator}!\n-----------------\n");
 
     //iterator++;
