@@ -126,6 +126,7 @@ foreach (ulong iterator in list)
     string info_path = Path.Combine(dirPath, "group-info.json");
     string textFileContents = string.Empty;
 
+    aux_retry:
     try
     {
         c = await Community.FromId(iterator, s);
@@ -153,6 +154,12 @@ foreach (ulong iterator in list)
         File.WriteAllText(Path.Combine(dirPath, $"details.txt"), e.ToString());
         success = false;
         goto end;
+    }
+    catch (Exception e)
+    {
+        Console.WriteLine($"Unknown error. Retrying in 5 seconds. Message: {e.Message}");
+        await Task.Delay(5000);
+        goto aux_retry;
     }
 
 
